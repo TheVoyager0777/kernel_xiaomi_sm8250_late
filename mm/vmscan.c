@@ -52,6 +52,7 @@
 #include <linux/dax.h>
 #include <linux/psi.h>
 #include <linux/memory.h>
+#include <linux/pagewalk.h>
 #include <linux/shmem_fs.h>
 #include <linux/ctype.h>
 #include <linux/debugfs.h>
@@ -3517,9 +3518,7 @@ static void walk_mm(struct mm_walk_args *args, struct mm_struct *mm)
 	int err;
 	struct mem_cgroup *memcg = args->memcg;
 	struct lruvec *lruvec = mem_cgroup_lruvec(NODE_DATA(args->node_id), memcg);
-	struct mm_walk walk = {
-		.mm = mm,
-		.private = args,
+	static const struct mm_walk_ops mm_walk_ops = {
 		.test_walk = should_skip_vma,
 		.p4d_entry = walk_pud_range,
 	};
@@ -3544,7 +3543,7 @@ static void walk_mm(struct mm_walk_args *args, struct mm_struct *mm)
 			goto contended;
 		}
 
-		err = walk_page_range(start, end, &walk);
+		err = walk_page_range(mm, start, end, &mm_walk_ops, args);
 
 		up_read(&mm->mmap_sem);
 
